@@ -11,8 +11,11 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/gorilla/websocket"
+	"github.com/y-yagi/dlogger"
 	"github.com/yuin/goldmark"
+
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 type TemplateArgument struct {
@@ -26,8 +29,8 @@ const (
 
 var (
 	filename string
-	upgrader = websocket.Upgrader{}
 	watcher  *fsnotify.Watcher
+	logger   = dlogger.New(os.Stdout)
 )
 
 func main() {
@@ -59,55 +62,34 @@ func startWatch() error {
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
+	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
-		if _, ok := err.(websocket.HandshakeError); !ok {
-			log.Println(err)
-		}
+		log.Println(err)
 		return
 	}
 
-	go wsWriter(ws)
-	wsReader(ws)
-}
+	defer c.Close(websocket.StatusInternalError, "the sky is falling")
 
-func wsWriter(ws *websocket.Conn) {
-	done := make(chan bool)
-	defer func() {
-		ws.Close()
-	}()
-
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				fmt.Printf("watch %v\n", event)
-				if !ok {
-					return
-				}
-
-				if err := ws.WriteMessage(websocket.TextMessage, []byte("")); err != nil {
-					log.Println(err)
-				}
-			}
-		}
-	}()
+	ctx := r.Context()
+	ctx = c.CloseRead(ctx)
 
 	if err := watcher.Add(filename); err != nil {
 		log.Fatal(err)
 	}
 
-	<-done
-}
-
-func wsReader(ws *websocket.Conn) {
-	ws.SetReadLimit(512)
-	ws.SetReadDeadline(time.Now().Add(pongWait))
-	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, _, err := ws.ReadMessage()
-		if err != nil {
-			break
+		select {
+		case event, ok := <-watcher.Events:
+			logger.Printf("watch %v\n", event)
+			if !ok {
+				return
+			}
+
+			err = wsjson.Write(ctx, c, "")
+			if err != nil {
+				logger.Printf("Write error %v\n", err)
+				return
+			}
 		}
 	}
 }
