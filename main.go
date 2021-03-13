@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"os"
 	"text/template"
+	"time"
 
+	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/websocket"
 	"github.com/yuin/goldmark"
 )
 
@@ -16,18 +19,97 @@ type TemplateArgument struct {
 	Body string
 }
 
-var filename string
+const (
+	pongWait  = 60 * time.Second
+	writeWait = 10 * time.Second
+)
+
+var (
+	filename string
+	upgrader = websocket.Upgrader{}
+	watcher  *fsnotify.Watcher
+)
 
 func main() {
 	if len(os.Args) == 1 {
 		fmt.Printf("please specify filename\n")
 		return
 	}
+
 	filename = os.Args[1]
+	if err := startWatch(); err != nil {
+		log.Println(err)
+		return
+	}
+	defer watcher.Close()
 
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/ws", wsHandler)
 	log.Print("Listening on http://localhost:8888/")
 	http.ListenAndServe(":8888", nil)
+}
+
+func startWatch() error {
+	var err error
+	watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); !ok {
+			log.Println(err)
+		}
+		return
+	}
+
+	go wsWriter(ws)
+	wsReader(ws)
+}
+
+func wsWriter(ws *websocket.Conn) {
+	done := make(chan bool)
+	defer func() {
+		ws.Close()
+	}()
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				fmt.Printf("watch %v\n", event)
+				if !ok {
+					return
+				}
+
+				if err := ws.WriteMessage(websocket.TextMessage, []byte("")); err != nil {
+					log.Println(err)
+				}
+			}
+		}
+	}()
+
+	if err := watcher.Add(filename); err != nil {
+		log.Fatal(err)
+	}
+
+	<-done
+}
+
+func wsReader(ws *websocket.Conn) {
+	ws.SetReadLimit(512)
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	for {
+		_, _, err := ws.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -66,24 +148,36 @@ const html = `
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
     <style>
-    	.markdown-body {
-    		box-sizing: border-box;
-    		min-width: 200px;
-    		max-width: 980px;
-    		margin: 0 auto;
-    		padding: 45px;
-    	}
+      .markdown-body {
+        box-sizing: border-box;
+        min-width: 200px;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+      }
 
-    	@media (max-width: 767px) {
-    		.markdown-body {
-    			padding: 15px;
-    		}
-    	}
+      @media (max-width: 767px) {
+        .markdown-body {
+          padding: 15px;
+        }
+      }
     </style>
+    <script type="text/javascript">
+      (function() {
+        var conn = new WebSocket("ws://localhost:8888/ws");
+        conn.onclose = function(evt) {
+          console.log('Connection closed');
+        }
+        conn.onmessage = function(evt) {
+          console.log('received message');
+					location.reload();
+        }
+      })();
+    </script>
   </head>
   <body>
     <article class="markdown-body">
-		{{.Body}}
+    {{.Body}}
     </article>
   </body>
 </html>
