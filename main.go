@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"text/template"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/y-yagi/dlogger"
@@ -25,9 +24,7 @@ type TemplateArgument struct {
 }
 
 const (
-	pongWait  = 60 * time.Second
-	writeWait = 10 * time.Second
-	app       = "mdv"
+	app = "mdv"
 )
 
 var (
