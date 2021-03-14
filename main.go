@@ -147,11 +147,7 @@ const html = `
     <script type="text/javascript">
       (function() {
         var conn = new WebSocket("ws://localhost:8888/ws");
-        conn.onclose = function(evt) {
-          console.log('Connection closed');
-        }
         conn.onmessage = function(evt) {
-          console.log('received message');
 					location.reload();
         }
       })();
