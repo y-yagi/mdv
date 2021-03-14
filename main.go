@@ -45,7 +45,7 @@ func main() {
 	flags.Parse(os.Args[1:])
 
 	if flags.NArg() != 1 {
-		fmt.Printf("please specify filename\n")
+		fmt.Println("please specify filename")
 		return
 	}
 	filename = flags.Args()[0]
@@ -88,13 +88,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for {
-		select {
-		case event, ok := <-watcher.Events:
+		for event := range watcher.Events {
 			logger.Printf("watch %v\n", event)
-			if !ok {
-				return
-			}
-
 			err = wsjson.Write(ctx, c, "")
 			if err != nil {
 				logger.Printf("Write error %v\n", err)
@@ -117,7 +112,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := TemplateArgument{Body: string(buf.Bytes()), Addr: r.Host}
+	t := TemplateArgument{Body: buf.String(), Addr: r.Host}
 
 	buf.Reset()
 	tpl, err := template.New("html").Parse(html)
@@ -127,11 +122,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tpl.Execute(buf, t)
-	fmt.Fprintf(w, string(buf.Bytes()))
+	fmt.Fprint(w, buf.String())
 }
 
 func errorResponse(err error, w http.ResponseWriter) {
-	fmt.Fprintf(w, fmt.Sprintf("Error occurred: %v", err))
+	fmt.Fprintf(w, "Error occurred: %v", err)
 }
 
 const html = `
