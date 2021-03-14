@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,26 +21,38 @@ import (
 
 type TemplateArgument struct {
 	Body string
+	Addr string
 }
 
 const (
 	pongWait  = 60 * time.Second
 	writeWait = 10 * time.Second
+	app       = "mdv"
 )
 
 var (
+	flags    *flag.FlagSet
 	filename string
+	addr     string
 	watcher  *fsnotify.Watcher
 	logger   = dlogger.New(os.Stdout)
 )
 
+func setFlags() {
+	flags = flag.NewFlagSet(app, flag.ExitOnError)
+	flags.StringVar(&addr, "addr", ":8888", "http service address")
+}
+
 func main() {
-	if len(os.Args) == 1 {
+	setFlags()
+	flags.Parse(os.Args[1:])
+
+	if flags.NArg() != 1 {
 		fmt.Printf("please specify filename\n")
 		return
 	}
+	filename = flags.Args()[0]
 
-	filename = os.Args[1]
 	if err := startWatch(); err != nil {
 		log.Println(err)
 		return
@@ -107,7 +120,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := TemplateArgument{Body: string(buf.Bytes())}
+	t := TemplateArgument{Body: string(buf.Bytes()), Addr: r.Host}
 
 	buf.Reset()
 	tpl, err := template.New("html").Parse(html)
@@ -146,7 +159,7 @@ const html = `
     </style>
     <script type="text/javascript">
       (function() {
-        var conn = new WebSocket("ws://localhost:8888/ws");
+        var conn = new WebSocket("ws://{{.Addr}}/ws");
         conn.onmessage = function(evt) {
 					location.reload();
         }
