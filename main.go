@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"text/template"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/y-yagi/dlogger"
@@ -87,13 +88,23 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
+	var timer *time.Timer
 	for {
 		for event := range watcher.Events {
 			logger.Printf("watch %v\n", event)
-			err = wsjson.Write(ctx, c, "")
-			if err != nil {
-				logger.Printf("Write error %v\n", err)
-				return
+
+			if timer == nil {
+				timer = time.NewTimer(100 * time.Millisecond)
+				go func() {
+					<-timer.C
+					timer = nil
+
+					err = wsjson.Write(ctx, c, "")
+					if err != nil {
+						logger.Printf("Write error %v\n", err)
+						return
+					}
+				}()
 			}
 		}
 	}
