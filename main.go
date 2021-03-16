@@ -92,6 +92,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		for event := range watcher.Events {
 			logger.Printf("watch %v\n", event)
+			// Vim will remove a file when a file was changed.  So we need to add a new file to the watcher.
+			if event.Op&fsnotify.Remove == fsnotify.Remove {
+				watcher.Add(filename)
+			}
 
 			if timer == nil {
 				timer = time.NewTimer(100 * time.Millisecond)
