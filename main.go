@@ -99,7 +99,19 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 					<-timer.C
 					timer = nil
 
-					err = wsjson.Write(ctx, c, "")
+					buf := new(bytes.Buffer)
+					body, err := ioutil.ReadFile(filename)
+					if err != nil {
+						logger.Printf("Read error %v\n", err)
+						return
+					}
+
+					if err = goldmark.Convert(body, buf); err != nil {
+						logger.Printf("Convert error %v\n", err)
+						return
+					}
+
+					err = wsjson.Write(ctx, c, buf.String())
 					if err != nil {
 						logger.Printf("Write error %v\n", err)
 						return
@@ -164,7 +176,8 @@ const html = `
       (function() {
         var conn = new WebSocket("ws://{{.Addr}}/ws");
         conn.onmessage = function(evt) {
-					location.reload();
+					let element = document.getElementsByClassName('markdown-body')[0]
+					element.innerHTML = JSON.parse(evt.data);
         }
       })();
     </script>
