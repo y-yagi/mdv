@@ -59,8 +59,11 @@ func main() {
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/ws", wsHandler)
-	log.Print("Listening on http://localhost:8888/")
-	http.ListenAndServe(":8888", nil)
+	log.Print("Listening on http://localhost" + addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 func startWatch() error {
