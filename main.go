@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"text/template"
 	"time"
 
@@ -59,7 +61,9 @@ func main() {
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/ws", wsHandler)
-	log.Print("Listening on http://localhost" + addr)
+	url := "http://localhost" + addr
+	log.Print("Listening on " + url)
+	open(url)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Println(err)
 		return
@@ -157,6 +161,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func errorResponse(err error, w http.ResponseWriter) {
 	fmt.Fprintf(w, "Error occurred: %v", err)
+}
+
+func open(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default:
+		cmd = "xdg-open"
+	}
+
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
 }
 
 const html = `
