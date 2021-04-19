@@ -17,6 +17,7 @@ import (
 	"github.com/y-yagi/dlogger"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -185,6 +186,9 @@ func open(url string) error {
 func buildParser() goldmark.Markdown {
 	return goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
 	)
 }
 
