@@ -16,6 +16,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/y-yagi/dlogger"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -117,7 +118,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					if err = goldmark.Convert(body, buf); err != nil {
+					if err = buildParser().Convert(body, buf); err != nil {
 						logger.Printf("Convert error %v\n", err)
 						return
 					}
@@ -141,7 +142,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = goldmark.Convert(body, buf); err != nil {
+	if err = buildParser().Convert(body, buf); err != nil {
 		errorResponse(err, w)
 		return
 	}
@@ -179,6 +180,12 @@ func open(url string) error {
 
 	args = append(args, url)
 	return exec.Command(cmd, args...).Start()
+}
+
+func buildParser() goldmark.Markdown {
+	return goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+	)
 }
 
 const html = `
