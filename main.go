@@ -8,12 +8,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"runtime"
 	"text/template"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/browser"
 	"github.com/y-yagi/dlogger"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -65,7 +64,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler)
 	url := "http://localhost" + addr
 	log.Print("Listening on " + url)
-	open(url)
+	browser.OpenURL(url)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Println(err)
 		return
@@ -163,24 +162,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func errorResponse(err error, w http.ResponseWriter) {
 	fmt.Fprintf(w, "Error occurred: %v", err)
-}
-
-func open(url string) error {
-	var cmd string
-	var args []string
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default:
-		cmd = "xdg-open"
-	}
-
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
 }
 
 func buildParser() goldmark.Markdown {
