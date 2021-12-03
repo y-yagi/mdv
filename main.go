@@ -17,6 +17,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -150,7 +151,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	t := TemplateArgument{Body: buf.String(), Addr: r.Host}
 
 	buf.Reset()
-	tpl, err := template.New("html").Parse(html)
+	tpl, err := template.New("html").Parse(layout)
 	if err != nil {
 		errorResponse(err, w)
 		return
@@ -170,10 +171,13 @@ func buildParser() goldmark.Markdown {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
+		),
 	)
 }
 
-const html = `
+const layout = `
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
