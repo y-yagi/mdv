@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -113,7 +112,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 					timer = nil
 
 					buf := new(bytes.Buffer)
-					body, err := ioutil.ReadFile(filename)
+					body, err := os.ReadFile(filename)
 					if err != nil {
 						logger.Printf("Read error %v\n", err)
 						return
@@ -137,7 +136,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
-	body, err := ioutil.ReadFile(filename)
+	body, err := os.ReadFile(filename)
 	if err != nil {
 		errorResponse(err, w)
 		return
