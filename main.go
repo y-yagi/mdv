@@ -35,6 +35,7 @@ var (
 	flags    *flag.FlagSet
 	filename string
 	addr     string
+	dir      string
 	watcher  *fsnotify.Watcher
 	logger   = dlogger.New(os.Stdout)
 )
@@ -42,6 +43,7 @@ var (
 func setFlags() {
 	flags = flag.NewFlagSet(app, flag.ExitOnError)
 	flags.StringVar(&addr, "addr", ":8888", "http service address")
+	flags.StringVar(&dir, "dir", "", "directory that uses in the file server")
 }
 
 func main() {
@@ -135,6 +137,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	if len(dir) != 0 && r.URL.Path != "/" {
+		fh := http.FileServer(http.Dir(dir))
+		fh.ServeHTTP(w, r)
+		return
+	}
+
 	buf := new(bytes.Buffer)
 	body, err := os.ReadFile(filename)
 	if err != nil {
