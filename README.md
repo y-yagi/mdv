@@ -14,7 +14,9 @@ If you point local files in a markdown file, please specify a directory to `dir`
 mdv -dir . <filename>
 ```
 
-If you want to customize a style of rendering, please specify a CSS file that describes the styles to CLI.
+### Style
+
+`mdv` uses [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) by default.  If you want to use an original style, please specify a `css` option. `mdv` only use the CSS file if `css` option is specified.
 
 ```bash
 mdv -css <CSS filename> <filename>

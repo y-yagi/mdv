@@ -24,9 +24,9 @@ import (
 )
 
 type TemplateArgument struct {
-	Body        string
-	Addr        string
-	CustomStyle string
+	Body  string
+	Addr  string
+	Style string
 }
 
 const (
@@ -34,14 +34,14 @@ const (
 )
 
 var (
-	flags       *flag.FlagSet
-	filename    string
-	addr        string
-	dir         string
-	css         string
-	customStyle string
-	watcher     *fsnotify.Watcher
-	logger      = dlogger.New(os.Stdout)
+	flags    *flag.FlagSet
+	filename string
+	addr     string
+	dir      string
+	css      string
+	style    string
+	watcher  *fsnotify.Watcher
+	logger   = dlogger.New(os.Stdout)
 )
 
 func setFlags() {
@@ -67,7 +67,8 @@ func main() {
 	}
 	defer watcher.Close()
 
-	if err := buildCustomStyle(); err != nil {
+	var err error
+	if style, err = buildStyle(); err != nil {
 		log.Println(err)
 		return
 
@@ -166,7 +167,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := TemplateArgument{Body: buf.String(), Addr: r.Host, CustomStyle: customStyle}
+	t := TemplateArgument{Body: buf.String(), Addr: r.Host, Style: style}
 
 	buf.Reset()
 	tpl, err := template.New("html").Parse(layout)
@@ -195,28 +196,24 @@ func buildParser() goldmark.Markdown {
 	)
 }
 
-func buildCustomStyle() error {
+func buildStyle() (string, error) {
 	if len(css) == 0 {
-		return nil
+		return defaultStyle, nil
 	}
 
 	if strings.HasPrefix(css, "http://") || strings.HasPrefix(css, "https://") {
-		customStyle = `<link rel="stylesheet" href="` + css + `">`
-		return nil
+		return `<link rel="stylesheet" href="` + css + `">`, nil
 	}
 
 	style, err := os.ReadFile(css)
 	if err != nil {
-		return err
+		return "", err
 	}
-	customStyle = "<style>" + string(style) + "</style>"
-	return nil
+
+	return "<style>" + string(style) + "</style>", nil
 }
 
-const layout = `
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+const defaultStyle = `
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown.min.css">
     <style>
       .markdown-body {
@@ -233,7 +230,13 @@ const layout = `
         }
       }
     </style>
-	{{.CustomStyle}}
+`
+
+const layout = `
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	{{.Style}}
     <script type="text/javascript">
       (function() {
         var conn = new WebSocket("ws://{{.Addr}}/ws");
