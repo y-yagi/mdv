@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -23,8 +24,9 @@ import (
 )
 
 type TemplateArgument struct {
-	Body string
-	Addr string
+	Body        string
+	Addr        string
+	CustomStyle string
 }
 
 const (
@@ -32,18 +34,21 @@ const (
 )
 
 var (
-	flags    *flag.FlagSet
-	filename string
-	addr     string
-	dir      string
-	watcher  *fsnotify.Watcher
-	logger   = dlogger.New(os.Stdout)
+	flags       *flag.FlagSet
+	filename    string
+	addr        string
+	dir         string
+	css         string
+	customStyle string
+	watcher     *fsnotify.Watcher
+	logger      = dlogger.New(os.Stdout)
 )
 
 func setFlags() {
 	flags = flag.NewFlagSet(app, flag.ExitOnError)
 	flags.StringVar(&addr, "addr", ":8888", "http service address")
 	flags.StringVar(&dir, "dir", "", "directory that uses in the file server")
+	flags.StringVar(&css, "css", "", "CSS file that uses in rendering")
 }
 
 func main() {
@@ -61,6 +66,12 @@ func main() {
 		return
 	}
 	defer watcher.Close()
+
+	if err := buildCustomStyle(); err != nil {
+		log.Println(err)
+		return
+
+	}
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/ws", wsHandler)
@@ -155,7 +166,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := TemplateArgument{Body: buf.String(), Addr: r.Host}
+	t := TemplateArgument{Body: buf.String(), Addr: r.Host, CustomStyle: customStyle}
 
 	buf.Reset()
 	tpl, err := template.New("html").Parse(layout)
@@ -184,6 +195,24 @@ func buildParser() goldmark.Markdown {
 	)
 }
 
+func buildCustomStyle() error {
+	if len(css) == 0 {
+		return nil
+	}
+
+	if strings.HasPrefix(css, "http://") || strings.HasPrefix(css, "https://") {
+		customStyle = `<link rel="stylesheet" href="` + css + `">`
+		return nil
+	}
+
+	style, err := os.ReadFile(css)
+	if err != nil {
+		return err
+	}
+	customStyle = "<style>" + string(style) + "</style>"
+	return nil
+}
+
 const layout = `
 <html>
   <head>
@@ -204,6 +233,7 @@ const layout = `
         }
       }
     </style>
+	{{.CustomStyle}}
     <script type="text/javascript">
       (function() {
         var conn = new WebSocket("ws://{{.Addr}}/ws");

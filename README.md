@@ -11,7 +11,13 @@ The content automatically refreshes when the file is updated. You don't need to 
 If you point local files in a markdown file, please specify a directory to `dir` option that local files exist.
 
 ```bash
-mdv -dir . README.md
+mdv -dir . <filename>
+```
+
+If you want to customize a style of rendering, please specify a CSS file that describes the styles to CLI.
+
+```bash
+mdv -css <CSS filename> <filename>
 ```
 
 ## Installation
