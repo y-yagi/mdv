@@ -78,7 +78,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler)
 	url := "http://localhost" + addr
 	log.Print("Listening on " + url)
-	browser.OpenURL(url)
+	go browser.OpenURL(url)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Println(err)
 		return
