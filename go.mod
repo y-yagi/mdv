@@ -1,6 +1,6 @@
 module github.com/y-yagi/mdv
 
-go 1.20
+go 1.21
 
 require (
 	github.com/cli/browser v1.3.0
