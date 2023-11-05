@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cli/browser"
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/browser"
 	"github.com/y-yagi/dlogger"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
