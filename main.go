@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 	"time"
@@ -78,7 +79,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler)
 	url := "http://localhost" + addr
 	log.Print("Listening on " + url)
-	go browser.OpenURL(url)
+	go openURL(url)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Println(err)
 		return
@@ -211,6 +212,15 @@ func buildStyle() (string, error) {
 	}
 
 	return "<style>" + string(style) + "</style>", nil
+}
+
+func openURL(url string) {
+	if len(os.Getenv("BROWSER")) > 0 {
+		cmd := exec.Command(os.Getenv("BROWSER"), url)
+		cmd.Run()
+	} else {
+		browser.OpenURL(url)
+	}
 }
 
 const defaultStyle = `
