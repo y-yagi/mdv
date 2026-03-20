@@ -157,7 +157,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buf := new(bytes.Buffer)
-	body, err := os.ReadFile(filename)
+	fileToRead := filename
+	if r.URL.Path != "/" {
+		pathFile := strings.TrimPrefix(r.URL.Path, "/")
+		if _, err := os.Stat(pathFile); err == nil {
+			fileToRead = pathFile
+		}
+	}
+	body, err := os.ReadFile(fileToRead)
 	if err != nil {
 		errorResponse(err, w)
 		return
