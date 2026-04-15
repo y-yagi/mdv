@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -35,14 +36,16 @@ const (
 )
 
 var (
-	flags    *flag.FlagSet
-	filename string
-	addr     string
-	dir      string
-	css      string
-	style    string
-	watcher  *fsnotify.Watcher
-	logger   = dlogger.New(os.Stdout)
+	flags     *flag.FlagSet
+	filename  string
+	addr      string
+	dir       string
+	css       string
+	style     string
+	watcher   *fsnotify.Watcher
+	logger    = dlogger.New(os.Stdout)
+	isDir     bool
+	targetDir string
 )
 
 func setFlags() {
@@ -57,18 +60,29 @@ func main() {
 	flags.Parse(os.Args[1:])
 
 	if flags.NArg() != 1 {
-		fmt.Println("please specify filename")
+		fmt.Println("please specify filename or directory")
 		return
 	}
 	filename = flags.Args()[0]
 
-	if err := startWatch(); err != nil {
+	// Check if the specified path is a directory
+	info, err := os.Stat(filename)
+	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer watcher.Close()
 
-	var err error
+	if info.IsDir() {
+		isDir = true
+		targetDir = filename
+	} else {
+		if err := startWatch(); err != nil {
+			log.Println(err)
+			return
+		}
+		defer watcher.Close()
+	}
+
 	if style, err = buildStyle(); err != nil {
 		log.Println(err)
 		return
@@ -156,6 +170,30 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle directory listing
+	if isDir {
+		if r.URL.Path == "/" {
+			// Show directory listing
+			files, err := listMarkdownFiles(targetDir)
+			if err != nil {
+				errorResponse(err, w)
+				return
+			}
+			renderFileList(w, r, files)
+			return
+		} else {
+			// Show specific file
+			filePath := filepath.Join(targetDir, strings.TrimPrefix(r.URL.Path, "/"))
+			if _, err := os.Stat(filePath); err == nil {
+				renderMarkdownFile(w, r, filePath)
+				return
+			}
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	// Original single file handling
 	buf := new(bytes.Buffer)
 	fileToRead := filename
 	if r.URL.Path != "/" {
@@ -230,6 +268,73 @@ func openURL(url string) {
 	}
 }
 
+func listMarkdownFiles(dir string) ([]string, error) {
+	var files []string
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			name := entry.Name()
+			ext := filepath.Ext(name)
+			if ext == ".md" || ext == ".markdown" {
+				files = append(files, name)
+			}
+		}
+	}
+	return files, nil
+}
+
+func renderFileList(w http.ResponseWriter, r *http.Request, files []string) {
+	var buf bytes.Buffer
+	buf.WriteString("<h1>Markdown Files</h1>\n<ul>\n")
+	for _, file := range files {
+		buf.WriteString(fmt.Sprintf(`<li><a href="/%s">%s</a></li>`, file, file))
+		buf.WriteString("\n")
+	}
+	buf.WriteString("</ul>")
+
+	t := TemplateArgument{Body: buf.String(), Addr: r.Host, Style: style}
+
+	buf.Reset()
+	tpl, err := template.New("html").Parse(layoutNoWS)
+	if err != nil {
+		errorResponse(err, w)
+		return
+	}
+
+	tpl.Execute(&buf, t)
+	fmt.Fprint(w, buf.String())
+}
+
+func renderMarkdownFile(w http.ResponseWriter, r *http.Request, filePath string) {
+	buf := new(bytes.Buffer)
+	body, err := os.ReadFile(filePath)
+	if err != nil {
+		errorResponse(err, w)
+		return
+	}
+
+	if err = buildParser().Convert(body, buf); err != nil {
+		errorResponse(err, w)
+		return
+	}
+
+	t := TemplateArgument{Body: buf.String(), Addr: r.Host, Style: style}
+
+	buf.Reset()
+	tpl, err := template.New("html").Parse(layoutNoWS)
+	if err != nil {
+		errorResponse(err, w)
+		return
+	}
+
+	tpl.Execute(buf, t)
+	fmt.Fprint(w, buf.String())
+}
+
 const defaultStyle = `
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
     <style>
@@ -263,6 +368,20 @@ const layout = `
         }
       })();
     </script>
+  </head>
+  <body>
+    <article class="markdown-body">
+    {{.Body}}
+    </article>
+  </body>
+</html>
+`
+
+const layoutNoWS = `
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	{{.Style}}
   </head>
   <body>
     <article class="markdown-body">
