@@ -232,7 +232,7 @@ func errorResponse(err error, w http.ResponseWriter) {
 
 func buildParser() goldmark.Markdown {
 	return goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(extension.GFM, &mermaidExtension{}),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
@@ -359,12 +359,17 @@ const layout = `
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 	{{.Style}}
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
     <script type="text/javascript">
       (function() {
         var conn = new WebSocket("ws://{{.Addr}}/ws");
         conn.onmessage = function(evt) {
 					let element = document.getElementsByClassName('markdown-body')[0]
 					element.innerHTML = JSON.parse(evt.data);
+					mermaid.run();
         }
       })();
     </script>
@@ -382,6 +387,10 @@ const layoutNoWS = `
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 	{{.Style}}
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
   </head>
   <body>
     <article class="markdown-body">
