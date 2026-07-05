@@ -16,7 +16,7 @@ mdv -dir . <filename>
 
 ### Mermaid
 
-Fenced code blocks with the `mermaid` language are rendered as diagrams using [Mermaid.js](https://github.com/mermaid-js/mermaid).
+Fenced code blocks with the `mermaid` language are rendered as diagrams using [Mermaid.js](https://github.com/mermaid-js/mermaid). Diagrams are zoomable and pannable (via [svg-pan-zoom](https://github.com/ariutta/svg-pan-zoom)), and their box can be resized by dragging the bottom-right corner.
 
 ````
 ```mermaid
