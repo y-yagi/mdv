@@ -360,8 +360,44 @@ const layout = `
     <meta name="viewport" content="width=device-width, initial-scale=1">
 	{{.Style}}
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <style>
+      pre.mermaid {
+        overflow: hidden;
+        resize: vertical;
+        height: 480px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+      }
+    </style>
     <script>
-      mermaid.initialize({ startOnLoad: true });
+      mermaid.initialize({ startOnLoad: false });
+      function renderMermaidDiagrams() {
+        mermaid.run().then(function() {
+          document.querySelectorAll('pre.mermaid svg').forEach(function(svg) {
+            svg.style.maxWidth = 'none';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            var panZoom = svgPanZoom(svg, {
+              zoomEnabled: true,
+              controlIconsEnabled: true,
+              fit: true,
+              center: true,
+              minZoom: 0.5,
+              maxZoom: 20
+            });
+            var container = svg.closest('pre.mermaid');
+            if (container && window.ResizeObserver) {
+              new ResizeObserver(function() {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+              }).observe(container);
+            }
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', renderMermaidDiagrams);
     </script>
     <script type="text/javascript">
       (function() {
@@ -369,7 +405,7 @@ const layout = `
         conn.onmessage = function(evt) {
 					let element = document.getElementsByClassName('markdown-body')[0]
 					element.innerHTML = JSON.parse(evt.data);
-					mermaid.run();
+					renderMermaidDiagrams();
         }
       })();
     </script>
@@ -388,8 +424,43 @@ const layoutNoWS = `
     <meta name="viewport" content="width=device-width, initial-scale=1">
 	{{.Style}}
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <style>
+      pre.mermaid {
+        overflow: hidden;
+        resize: vertical;
+        height: 480px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+      }
+    </style>
     <script>
-      mermaid.initialize({ startOnLoad: true });
+      mermaid.initialize({ startOnLoad: false });
+      document.addEventListener('DOMContentLoaded', function() {
+        mermaid.run().then(function() {
+          document.querySelectorAll('pre.mermaid svg').forEach(function(svg) {
+            svg.style.maxWidth = 'none';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            var panZoom = svgPanZoom(svg, {
+              zoomEnabled: true,
+              controlIconsEnabled: true,
+              fit: true,
+              center: true,
+              minZoom: 0.5,
+              maxZoom: 20
+            });
+            var container = svg.closest('pre.mermaid');
+            if (container && window.ResizeObserver) {
+              new ResizeObserver(function() {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+              }).observe(container);
+            }
+          });
+        });
+      });
     </script>
   </head>
   <body>
