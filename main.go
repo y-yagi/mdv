@@ -363,12 +363,11 @@ const layout = `
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <style>
       pre.mermaid {
-        overflow: auto;
+        overflow: hidden;
         resize: vertical;
         height: 480px;
         border: 1px solid #d0d7de;
         border-radius: 6px;
-        cursor: grab;
       }
     </style>
     <script>
@@ -376,7 +375,10 @@ const layout = `
       function renderMermaidDiagrams() {
         mermaid.run().then(function() {
           document.querySelectorAll('pre.mermaid svg').forEach(function(svg) {
-            svgPanZoom(svg, {
+            svg.style.maxWidth = 'none';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            var panZoom = svgPanZoom(svg, {
               zoomEnabled: true,
               controlIconsEnabled: true,
               fit: true,
@@ -384,6 +386,14 @@ const layout = `
               minZoom: 0.5,
               maxZoom: 20
             });
+            var container = svg.closest('pre.mermaid');
+            if (container && window.ResizeObserver) {
+              new ResizeObserver(function() {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+              }).observe(container);
+            }
           });
         });
       }
@@ -417,12 +427,11 @@ const layoutNoWS = `
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <style>
       pre.mermaid {
-        overflow: auto;
+        overflow: hidden;
         resize: vertical;
         height: 480px;
         border: 1px solid #d0d7de;
         border-radius: 6px;
-        cursor: grab;
       }
     </style>
     <script>
@@ -430,7 +439,10 @@ const layoutNoWS = `
       document.addEventListener('DOMContentLoaded', function() {
         mermaid.run().then(function() {
           document.querySelectorAll('pre.mermaid svg').forEach(function(svg) {
-            svgPanZoom(svg, {
+            svg.style.maxWidth = 'none';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            var panZoom = svgPanZoom(svg, {
               zoomEnabled: true,
               controlIconsEnabled: true,
               fit: true,
@@ -438,6 +450,14 @@ const layoutNoWS = `
               minZoom: 0.5,
               maxZoom: 20
             });
+            var container = svg.closest('pre.mermaid');
+            if (container && window.ResizeObserver) {
+              new ResizeObserver(function() {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+              }).observe(container);
+            }
           });
         });
       });
